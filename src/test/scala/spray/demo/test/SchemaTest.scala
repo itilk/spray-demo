@@ -3,7 +3,7 @@ package spray.demo.test
 import org.scalatest.time.{Seconds, Span}
 import org.scalatest.{FunSuite, BeforeAndAfter}
 import org.scalatest.concurrent.ScalaFutures
-import spray.demo.db.{Repo, Schema, Db}
+import spray.demo.db.{RepoActor, Schema, Db}
 import spray.demo.model._
 
 import scala.util.Success
@@ -19,22 +19,28 @@ class SchemaTest extends FunSuite with BeforeAndAfter with ScalaFutures {
   test("Adding a Team and a Player Works") {
     Db.database.run((Schema.leagues.schema ++ Schema.conferences.schema ++ Schema.divisions.schema ++ Schema.teams.schema ++ Schema.players.schema).create).futureValue
 
-    val mlbId = Repo.createLeague(League(None, "MLB", "baseball", Nil))
-    val nlId = Repo.createConference(Conference(None, "National League", mlbId.get, Nil))
-    val alId = Repo.createConference(Conference(None, "American League", mlbId.get, Nil))
-    val nlCentralId = Repo.createDivision(Division(None, "NL Central", nlId.get, Nil))
-    val redsId = Repo.createTeam(Team(None, "Reds", "Cincinnati", nlCentralId.get, Nil))
-    val frazier = Repo.createPlayer(Player(None, "Todd Frazier", 21, "3B", redsId.get))
-
-    val mlb = Repo.getLeague(mlbId.get)
-
-    println(mlb)
-
-    val leagues = Repo.getLeagues()
-
-    println(leagues)
-
-    Repo.getLeagueOuterJoin(mlbId.get)
+//    val noLeagues = Repo.getLeagues()
+//    println(noLeagues)
+//
+//    val noLeague = Repo.getLeague(12345)
+//    println(noLeague)
+//
+//    val mlbId = Repo.createLeague(League(None, "MLB", "baseball", Nil))
+//    val nlId = Repo.createConference(Conference(None, "National League", mlbId.get, Nil))
+//    val alId = Repo.createConference(Conference(None, "American League", mlbId.get, Nil))
+//    val nlCentralId = Repo.createDivision(Division(None, "NL Central", nlId.get, Nil))
+//    val redsId = Repo.createTeam(Team(None, "Reds", "Cincinnati", nlCentralId.get, Nil))
+//    val frazier = Repo.createPlayer(Player(None, "Todd Frazier", 21, "3B", redsId.get))
+//
+//    val mlb = Repo.getLeague(mlbId.get)
+//
+//    println(mlb)
+//
+//    val leagues = Repo.getLeagues()
+//
+//    println(leagues)
+//
+//    Repo.getLeagueOuterJoin(mlbId.get)
 
 //    val redsId = Repo.createTeam(Team(None, "Reds", "Cincinnati")).get
 //    val cubsId = Repo.createTeam(Team(None, "Cubs", "Chicago")).get

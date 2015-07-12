@@ -1,6 +1,6 @@
 package spray.demo.rest
 
-import spray.demo.model.Player
+import spray.demo.model._
 import spray.json._
 
 /**
@@ -8,4 +8,8 @@ import spray.json._
  */
 object DemoJsonProtocol extends DefaultJsonProtocol {
   implicit val playerJsonProtocol = jsonFormat5(Player)
+  implicit val teamJsonProtocol = jsonFormat5(Team)
+  implicit val divisionJsonProtocol = jsonFormat4(Division)
+  implicit val conferenceJsonProtocol = jsonFormat4(Conference)
+  implicit val leagueJsonProtocol = jsonFormat4(League)
 }

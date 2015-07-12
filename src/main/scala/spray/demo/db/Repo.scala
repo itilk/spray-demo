@@ -1,22 +1,36 @@
 package spray.demo.db
 
 import scala.concurrent.ExecutionContext.Implicits.global
-
+import akka.actor.{Props, ActorRef, Actor}
+import akka.util.Timeout
 import spray.demo.model._
 
-import scala.concurrent.Await
+import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
 import scala.util.Try
 
 /**
  * Created by itilk on 7/7/15.
- */
-object Repo {
+// */
 
+object Repo {
   import Db.slickDriver.api._
   import Schema.{leagues, conferences, divisions, teams, players}
 
   val database = Db.database
+
+  def createSchema() = {
+    val actions =
+      (Schema.leagues.schema ++ Schema.conferences.schema ++ Schema.divisions.schema ++ Schema.teams.schema ++ Schema.players.schema).create >>
+      (leagues += League(None, "MLB", "baseball", Nil)) >>
+      (conferences += Conference(None, "National League", 1, Nil)) >>
+      (conferences += Conference(None, "American League", 1, Nil)) >>
+      (divisions += Division(None, "NL Central", 1, Nil)) >>
+      (teams += Team(None, "Reds", "Cincinnati", 1, Nil)) >>
+      (players += Player(None, "Todd Frazier", 21, "3B", 1))
+    Await.result(database.run(actions), 10 seconds)
+
+  }
 
   def createLeague(l: League): Try[Int] = {
     Try {
@@ -52,10 +66,10 @@ object Repo {
     Try {
       val query = for {
         l <- leagues if l.id === id
-        c <- conferences if(c.leagueId === l.id)
-        d <- divisions if(d.confId === c.id)
-        t <- teams if(t.divId === d.id)
-        p <- players if(p.teamId === t.id)
+        c <- conferences if (c.leagueId === l.id)
+        d <- divisions if (d.confId === c.id)
+        t <- teams if (t.divId === d.id)
+        p <- players if (p.teamId === t.id)
       } yield (l, c, d, t, p)
 
       val result: Seq[(League, Conference, Division, Team, Player)] =
@@ -68,7 +82,7 @@ object Repo {
     }
   }
 
-  def getLeagues() : Try[Option[Seq[League]]] = {
+  def getLeagues(): Try[Option[Seq[League]]] = {
     Try {
       val query = for {
         l <- leagues
@@ -90,7 +104,7 @@ object Repo {
 
   def getLeagueOuterJoin(id: Int) = {
     def q(id: Int) =
-    sql"""SELECT l.LEAGUE_ID, l.LEAGUE_NAME, l.LEAGUE_SPORT, c.CONF_ID, c.CONF_NAME, c.CONF_LEAGUE_ID, d.DIV_ID, d.DIV_NAME,
+      sql"""SELECT l.LEAGUE_ID, l.LEAGUE_NAME, l.LEAGUE_SPORT, c.CONF_ID, c.CONF_NAME, c.CONF_LEAGUE_ID, d.DIV_ID, d.DIV_NAME,
                   d.DIV_CONF_ID, t.TEAM_ID, t.TEAM_NAME, t.TEAM_CITY, t.TEAM_DIV_ID,  p.PLAYER_ID, p.PLAYER_NAME,
                   p.PLAYER_NUMBER, p.PLAYER_POSITION, p.PLAYER_TEAM_ID
            FROM LEAGUES l
@@ -105,51 +119,66 @@ object Repo {
 
     val league =
       result.groupBy(_._1).map(
-      a => League(a._1._1, a._1._2, a._1._3, a._2.groupBy(_._2).map(
-        b => {
-          b._1._1 match {
-            case Some(_) => Some(Conference(b._1._1, b._1._2, b._1._3, b._2.groupBy(_._3).map(
-              c => {
-                c._1._1 match {
-                  case Some(_) => Some(Division(c._1._1, c._1._2, c._1._3, c._2.groupBy(_._4).map(
-                    d => {
-                      d._1._1 match {
-                        case Some(_) => Some(Team(d._1._1, d._1._2, d._1._3, d._1._4, d._2.groupBy(_._5).map(
-                          e=> {
-                            e._1._1 match {
-                              case Some(_) => Some(Player(e._1._1, e._1._2, e._1._3, e._1._4, e._1._5))
-                              case _ => None
+        a => League(a._1._1, a._1._2, a._1._3, a._2.groupBy(_._2).map(
+          b => {
+            b._1._1 match {
+              case Some(_) => Some(Conference(b._1._1, b._1._2, b._1._3, b._2.groupBy(_._3).map(
+                c => {
+                  c._1._1 match {
+                    case Some(_) => Some(Division(c._1._1, c._1._2, c._1._3, c._2.groupBy(_._4).map(
+                      d => {
+                        d._1._1 match {
+                          case Some(_) => Some(Team(d._1._1, d._1._2, d._1._3, d._1._4, d._2.groupBy(_._5).map(
+                            e => {
+                              e._1._1 match {
+                                case Some(_) => Some(Player(e._1._1, e._1._2, e._1._3, e._1._4, e._1._5))
+                                case _ => None
+                              }
                             }
-                          }
-                        ).toList.flatten))
-                        case _ => None
+                          ).toList.flatten))
+                          case _ => None
+                        }
                       }
-                    }
-                  ).toList.flatten))
-                  case _ => None
+                    ).toList.flatten))
+                    case _ => None
+                  }
                 }
-              }
-            ).toList.flatten))
-            case _ => None
+              ).toList.flatten))
+              case _ => None
+            }
           }
-        }
-      ).toList.flatten)
-    )
+        ).toList.flatten)
+      )
     println(league.headOption)
   }
 
-  def parseLeagues(rows : Seq[(League, Conference, Division, Team, Player)]) : Seq[League] = {
+  def parseLeagues(rows: Seq[(League, Conference, Division, Team, Player)]): Seq[League] = {
     rows.groupBy(_._1).map(
-        x => League(x._1.id, x._1.name, x._1.sport, x._2.groupBy(_._2).map(
-          y => Conference(y._1.id, y._1.name, y._1.leagueId, y._2.groupBy(_._3).map(
-            z=> Division(z._1.id, z._1.name, z._1.conferenceId, z._2.groupBy(_._4).map(
-              i=> Team(i._1.id, i._1.name, i._1.city, i._1.divisionId, i._2.groupBy(_._5).map(
-                j=> Player(j._1.id, j._1.name, j._1.number, j._1.position, j._1.teamId)
-              ).toList)
+      x => League(x._1.id, x._1.name, x._1.sport, x._2.groupBy(_._2).map(
+        y => Conference(y._1.id, y._1.name, y._1.leagueId, y._2.groupBy(_._3).map(
+          z => Division(z._1.id, z._1.name, z._1.conferenceId, z._2.groupBy(_._4).map(
+            i => Team(i._1.id, i._1.name, i._1.city, i._1.divisionId, i._2.groupBy(_._5).map(
+              j => Player(j._1.id, j._1.name, j._1.number, j._1.position, j._1.teamId)
             ).toList)
           ).toList)
         ).toList)
+      ).toList)
     ).toList
+  }
+
+  def getPlayers(): Future[Seq[Player]] = {
+    val q = for {
+      p <- players
+    } yield p
+    database.run(q.result)
+  }
+
+  def getPlayer(id: Int) : Future[Option[Player]] = {
+    val q = for {
+      p <-players if p.id === id
+    } yield p
+
+    database.run(q.result.headOption)
   }
 
   //  def deletePlayer(p: Player) : Try[Int] = {
