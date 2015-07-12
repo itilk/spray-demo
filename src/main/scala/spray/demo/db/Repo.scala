@@ -121,7 +121,7 @@ object Repo {
                               case _ => None
                             }
                           }
-                        ).toList.flatten, Nil))
+                        ).toList.flatten))
                         case _ => None
                       }
                     }
@@ -145,7 +145,7 @@ object Repo {
             z=> Division(z._1.id, z._1.name, z._1.conferenceId, z._2.groupBy(_._4).map(
               i=> Team(i._1.id, i._1.name, i._1.city, i._1.divisionId, i._2.groupBy(_._5).map(
                 j=> Player(j._1.id, j._1.name, j._1.number, j._1.position, j._1.teamId)
-              ).toList, Nil)
+              ).toList)
             ).toList)
           ).toList)
         ).toList)

@@ -23,7 +23,7 @@ class SchemaTest extends FunSuite with BeforeAndAfter with ScalaFutures {
     val nlId = Repo.createConference(Conference(None, "National League", mlbId.get, Nil))
     val alId = Repo.createConference(Conference(None, "American League", mlbId.get, Nil))
     val nlCentralId = Repo.createDivision(Division(None, "NL Central", nlId.get, Nil))
-    val redsId = Repo.createTeam(Team(None, "Reds", "Cincinnati", nlCentralId.get, Nil, Nil))
+    val redsId = Repo.createTeam(Team(None, "Reds", "Cincinnati", nlCentralId.get, Nil))
     val frazier = Repo.createPlayer(Player(None, "Todd Frazier", 21, "3B", redsId.get))
 
     val mlb = Repo.getLeague(mlbId.get)
