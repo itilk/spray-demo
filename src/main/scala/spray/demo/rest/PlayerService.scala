@@ -17,14 +17,14 @@ import scala.util.{Success, Failure}
  * Created by itilk on 7/12/15.
  */
 trait PlayerService extends HttpService with SprayJsonSupport {
-  def playerRoutes(context : ActorContext)(implicit askTimeout : Timeout) : Route = {
+  def playerRoutes(context: ActorContext)(implicit askTimeout: Timeout): Route = {
     implicit def ec = context.dispatcher
     import DemoJsonProtocol._
     pathPrefix("demo") {
       pathPrefix("player") {
         get {
           path(IntNumber) { id =>
-            rejectEmptyResponse{
+            rejectEmptyResponse {
               respondWithMediaType(`application/json`) {
                 onComplete(Repo.getPlayer(id)) {
                   case Success(x) => complete {
@@ -35,21 +35,59 @@ trait PlayerService extends HttpService with SprayJsonSupport {
               }
             }
           } ~
-          pathSingleSlash {
-            rejectEmptyResponse {
-              respondWithMediaType(`application/json`) {
-                import DemoJsonProtocol._
-                onComplete(Repo.getPlayers()) {
-                  case Success(x) => complete{
-                    x
+            pathSingleSlash {
+              rejectEmptyResponse {
+                respondWithMediaType(`application/json`) {
+                  import DemoJsonProtocol._
+                  onComplete(Repo.getPlayers()) {
+                    case Success(x) => complete {
+                      x
+                    }
+                    case Failure(ex) => complete(InternalServerError, s"An error occurred: ${ex.getMessage}")
                   }
-                  case Failure(ex)    => complete(InternalServerError, s"An error occurred: ${ex.getMessage}")
                 }
               }
             }
+        } ~
+          post {
+            pathSingleSlash {
+              import DemoJsonProtocol._
+              entity(as[Player]) { player =>
+                onComplete(Repo.createPlayer(player)) {
+                  case Success(x) => complete {
+                    x.toString()
+                  }
+                  case Failure(ex) => complete(InternalServerError, s"An error occurred: ${ex.getMessage}")
+                }
+              }
+            }
+          } ~
+          put {
+            pathSingleSlash {
+              import DemoJsonProtocol._
+              entity(as[Player]) { player =>
+                onComplete(Repo.updatePlayer(player)) {
+                  case Success(x) => complete {
+                    x.toString()
+                  }
+                  case Failure(ex) => complete(InternalServerError, s"An error occurred: ${ex.getMessage}")
+                }
+              }
+            }
+          } ~
+          delete {
+            path(IntNumber) { id =>
+              import DemoJsonProtocol._
+              onComplete(Repo.deletePlayer(id)) {
+                case Success(x) => complete {
+                  x.toString()
+                }
+                case Failure(ex) => complete(InternalServerError, s"An error occurred: ${ex.getMessage}")
+              }
+            }
           }
-        }
       }
     }
   }
+
 }

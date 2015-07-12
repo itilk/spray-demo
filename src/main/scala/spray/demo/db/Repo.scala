@@ -14,6 +14,7 @@ import scala.util.Try
 // */
 
 object Repo {
+
   import Db.slickDriver.api._
   import Schema.{leagues, conferences, divisions, teams, players}
 
@@ -22,12 +23,12 @@ object Repo {
   def createSchema() = {
     val actions =
       (Schema.leagues.schema ++ Schema.conferences.schema ++ Schema.divisions.schema ++ Schema.teams.schema ++ Schema.players.schema).create >>
-      (leagues += League(None, "MLB", "baseball", Nil)) >>
-      (conferences += Conference(None, "National League", 1, Nil)) >>
-      (conferences += Conference(None, "American League", 1, Nil)) >>
-      (divisions += Division(None, "NL Central", 1, Nil)) >>
-      (teams += Team(None, "Reds", "Cincinnati", 1, Nil)) >>
-      (players += Player(None, "Todd Frazier", 21, "3B", 1))
+        (leagues += League(None, "MLB", "baseball", Nil)) >>
+        (conferences += Conference(None, "National League", 1, Nil)) >>
+        (conferences += Conference(None, "American League", 1, Nil)) >>
+        (divisions += Division(None, "NL Central", 1, Nil)) >>
+        (teams += Team(None, "Reds", "Cincinnati", 1, Nil)) >>
+        (players += Player(None, "Todd Frazier", 21, "3B", 1))
     Await.result(database.run(actions), 10 seconds)
 
   }
@@ -56,11 +57,23 @@ object Repo {
     }
   }
 
-  def createPlayer(p: Player): Try[Int] = {
-    Try {
-      Await.result(database.run(players returning players.map(_.id) += p), 10 seconds)
-    }
+  def createPlayer(p: Player): Future[Int] = {
+    database.run(players returning players.map(_.id) += p)
   }
+
+  def updatePlayer(player: Player): Future[Int] = {
+    val updateQuery = for {
+      p <- players if p.id === player.id
+    } yield (p.name, p.number, p.position, p.teamId)
+
+    val updateAction = updateQuery.update((player.name, player.number, player.position, player.teamId))
+    database.run(updateAction)
+  }
+
+    def deletePlayer(id: Int) : Future[Int] = {
+        val delete = players.filter(_.id === id).delete
+        database.run(delete)
+    }
 
   def getLeague(id: Int): Try[Option[League]] = {
     Try {
@@ -173,9 +186,9 @@ object Repo {
     database.run(q.result)
   }
 
-  def getPlayer(id: Int) : Future[Option[Player]] = {
+  def getPlayer(id: Int): Future[Option[Player]] = {
     val q = for {
-      p <-players if p.id === id
+      p <- players if p.id === id
     } yield p
 
     database.run(q.result.headOption)
@@ -200,38 +213,11 @@ object Repo {
   //    }
   //  }
   //
-  //  def createCoach(coach: Coach) : Try[Int]= {
-  //    Try {
-  //      Await.result(database.run(coaches += coach), 10 seconds)
-  //    }
-  //  }
-  //
-  //  def updatePlayer(player: Player) : Try[Int] = {
-  //    Try {
-  //      val updateQuery = for {
-  //        p <- players if p.id === player.id
-  //      } yield (p.name, p.number, p.position, p.teamId)
-  //
-  //      val updateAction = updateQuery.update((player.name, player.number, player.position, player.team.get.id.get))
-  //      Await.result(database.run(updateAction), 10 seconds)
-  //    }
-  //  }
   //
   //  def deletePlayer(p: Player) : Try[Int] = {
   //    Try{
   //      val delete = players.filter(_.id === p.id).delete
   //      Await.result(database.run(delete), 10 seconds)
-  //    }
-  //  }
-  //
-  //  def getPlayers() : Try[List[Player]] = {
-  //    Try{
-  //      val query = for{
-  //        p <- players
-  //        t <- p.team
-  //      } yield (p, t)
-  //
-  //      Await.result(database.run(query.result).map(toPlayers), 10 seconds)
   //    }
   //  }
   //
