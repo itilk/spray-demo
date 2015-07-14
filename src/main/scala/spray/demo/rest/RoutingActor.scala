@@ -13,11 +13,14 @@ object RoutingActor {
   def name = "router"
 }
 
-class RoutingActor(implicit val askTimeout: Timeout) extends Actor with LeagueService with PlayerService {
+class RoutingActor(implicit val askTimeout: Timeout) extends Actor
+  with LeagueService
+  with PlayerService
+  with TeamService {
   def actorRefFactory = context
 
   def receive: Receive = {
-    val routes = leagueRoutes(context) ~ playerRoutes(context)
+    val routes = leagueRoutes(context) ~ playerRoutes(context) ~ teamRoutes(context)
     runRoute(routes)
   }
 }

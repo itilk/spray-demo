@@ -51,10 +51,28 @@ object Repo {
     }
   }
 
-  def createTeam(t: Team): Try[Int] = {
-    Try {
-      Await.result(database.run(teams returning teams.map(_.id) += t), 10 seconds)
-    }
+  def createTeam(t: Team): Future[Int] = {
+    database.run(teams returning teams.map(_.id) += t)
+  }
+
+  def getTeams(): Future[Seq[(Team, Option[Player])]] = {
+    val query = for {
+      (t, p) <- teams joinLeft players on(_.id === _.teamId)
+      //p <- players if t.id === p.teamId
+    } yield (t, p)
+
+    database.run(query.result)
+  }
+
+
+  def getTeam(id: Int): Future[Seq[(Team, Option[Player])]] = {
+    val query = for {
+      (t, p) <- teams joinLeft players on(_.id === _.teamId) if t.id === id
+//      t <- teams if t.id === id
+//      p <- players if t.id === p.teamId
+    } yield (t, p)
+
+    database.run(query.result)
   }
 
   def createPlayer(p: Player): Future[Int] = {
@@ -70,10 +88,25 @@ object Repo {
     database.run(updateAction)
   }
 
-    def deletePlayer(id: Int) : Future[Int] = {
-        val delete = players.filter(_.id === id).delete
-        database.run(delete)
-    }
+  def deletePlayer(id: Int): Future[Int] = {
+    val delete = players.filter(_.id === id).delete
+    database.run(delete)
+  }
+
+  def getPlayers(): Future[Seq[Player]] = {
+    val q = for {
+      p <- players
+    } yield p
+    database.run(q.result)
+  }
+
+  def getPlayer(id: Int): Future[Option[Player]] = {
+    val q = for {
+      p <- players if p.id === id
+    } yield p
+
+    database.run(q.result.headOption)
+  }
 
   def getLeague(id: Int): Try[Option[League]] = {
     Try {
@@ -179,21 +212,6 @@ object Repo {
     ).toList
   }
 
-  def getPlayers(): Future[Seq[Player]] = {
-    val q = for {
-      p <- players
-    } yield p
-    database.run(q.result)
-  }
-
-  def getPlayer(id: Int): Future[Option[Player]] = {
-    val q = for {
-      p <- players if p.id === id
-    } yield p
-
-    database.run(q.result.headOption)
-  }
-
   //  def deletePlayer(p: Player) : Try[Int] = {
   //    Try{
   //      val delete = players.filter(_.id === p.id).delete
@@ -213,14 +231,6 @@ object Repo {
   //    }
   //  }
   //
-  //
-  //  def deletePlayer(p: Player) : Try[Int] = {
-  //    Try{
-  //      val delete = players.filter(_.id === p.id).delete
-  //      Await.result(database.run(delete), 10 seconds)
-  //    }
-  //  }
-  //
   //  def getTeams() : Try[Seq[Team]] = {
   //    Try{
   //      val query = for{
@@ -231,16 +241,6 @@ object Repo {
   //    }
   //  }
   //
-  //  def getPlayer(id : Int) : Try[Player] = {
-  //    Try {
-  //      val query = for {
-  //        p <- players if p.id === id
-  //        t <- p.team
-  //      } yield (p, t)
-  //
-  //      Await.result(database.run(query.result.head).map(toPlayer), 10 seconds)
-  //    }
-  //  }
   //
   //  def getTeam(id : Int) : Try[Team] = {
   //    Try {
